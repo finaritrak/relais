@@ -1,0 +1,66 @@
+# relais — exemple de configuration
+# Copiez ce fichier en relais.toml, puis : relais check && relais serve
+
+[serveur]
+# Clés que vos applications envoient dans "Authorization: Bearer …".
+# Laissez vide uniquement en local. Ou lisez-les depuis l'environnement (séparées par des virgules) :
+cles_clients_env = "RELAIS_CLES_CLIENTS"
+
+# --- Fournisseurs ----------------------------------------------------------
+
+[[fournisseurs]]
+nom = "local"
+type = "openai"                          # Ollama expose une API compatible OpenAI
+base_url = "http://localhost:11434/v1"
+modele = "qwen2.5:7b"
+externe = false                          # les données restent chez vous : pas de masquage
+max_concurrence = 2                      # au-delà, la requête bascule vers le cloud
+timeout = 60
+
+[[fournisseurs]]
+nom = "claude"
+type = "anthropic"
+base_url = "https://api.anthropic.com"
+modele = "claude-sonnet-5-5"
+cle_api_env = "ANTHROPIC_API_KEY"
+externe = true                           # données sensibles masquées avant l'envoi
+# Prix en USD par million de jetons : reportez les tarifs actuels de votre fournisseur
+# (ils servent à respecter le budget journalier).
+prix_entree_par_million = 0.0
+prix_sortie_par_million = 0.0
+max_tokens_defaut = 1024
+
+# [[fournisseurs]]
+# nom = "openai"
+# type = "openai"
+# base_url = "https://api.openai.com/v1"
+# modele = "…"
+# cle_api_env = "OPENAI_API_KEY"
+# externe = true
+
+# --- Routes : le champ "model" envoyé par vos applications -------------------
+
+[routes]
+defaut = ["local", "claude"]             # local d'abord, Claude en secours
+local-seul = ["local"]                   # données ultra-sensibles : jamais de cloud
+qualite = ["claude", "local"]            # le meilleur modèle d'abord
+
+# --- Garde-fous --------------------------------------------------------------
+
+[budget]
+journalier_usd = 5.0                     # au-delà, les fournisseurs payants sont écartés
+
+[masquage]
+actif = true
+# categories = ["EMAIL", "TEL", "CIN", "CARTE", "IBAN", "IP"]   # par défaut : toutes
+[masquage.motifs_perso]
+# NUMERO_CLIENT = 'CLT-\d{6}'
+
+[cache]
+actif = true                             # seulement pour les requêtes temperature = 0
+taille = 1000
+ttl_secondes = 3600
+
+[disjoncteur]
+echecs = 3                               # après 3 échecs d'affilée…
+pause_secondes = 30                      # …le fournisseur est écarté 30 s

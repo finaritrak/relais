@@ -1,0 +1,32 @@
+# Ollama (modèle local) + relais devant, en une commande :
+#   cp relais.example.toml relais.toml   # puis remplacer base_url du fournisseur local par http://ollama:11434/v1
+#   export ANTHROPIC_API_KEY=… RELAIS_CLES_CLIENTS=ma-cle
+#   docker compose up -d && docker compose exec ollama ollama pull qwen2.5:7b
+
+services:
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    # GPU NVIDIA : décommentez
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+  relais:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - ANTHROPIC_API_KEY
+      - RELAIS_CLES_CLIENTS
+    volumes:
+      - ./relais.toml:/config/relais.toml:ro
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama:
